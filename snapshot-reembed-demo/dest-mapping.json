@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "index.knn": true,
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "properties": {
+      "vec": {
+        "type": "knn_vector",
+        "dimension": 8,
+        "mode": "on_disk",
+        "method": { "name": "hnsw", "engine": "faiss", "space_type": "l2" }
+      },
+      "label": { "type": "keyword" }
+    }
+  }
+}

@@ -593,8 +593,172 @@ tasks.register('buildJniTest', Test) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Rust JNI (alternative to C++ JNI)
+// Enable with: ./gradlew build -Prust
+// ---------------------------------------------------------------------------
+
+tasks.register('buildRustJniLib', Exec) {
+    description = 'Build the Rust JNI library (alternative to C++ JNI)'
+    group = 'build'
+
+    // Only depends on buildJniLib if jni/build/release doesn't exist yet.
+    // If the C++ libraries are already built, skip the cmake/build dependency.
+    onlyIf {
+        def cargoToml = file("$rootDir/jni/rust-port/knn-jni-rs/Cargo.toml")
+        cargoToml.exists()
+    }
+
+    workingDir "$rootDir/jni/rust-port/knn-jni-rs"
+    environment 'KNN_JNI_STATIC', '1'
+    // Add cargo to PATH (user's .cargo/bin)
+    def cargoHome = System.getenv('CARGO_HOME') ?: "${System.getProperty('user.home')}/.cargo"
+    environment 'PATH', "${cargoHome}/bin:${System.getenv('PATH')}"
+    if (Os.isFamily(Os.FAMILY_MAC)) {
+        environment 'DYLD_LIBRARY_PATH', '/opt/homebrew/opt/libomp/lib'
+    }
+    commandLine "${cargoHome}/bin/cargo", 'build', '--release'
+}
+
+tasks.register('deployRustJniLib') {
+    description = 'Deploy the Rust JNI library to jni/build/release (replaces C++ library)'
+    group = 'build'
+    dependsOn buildRustJniLib
+
+    doLast {
+        def releaseDir = "$rootDir/jni/build/release"
+        def rustLib = "$rootDir/jni/rust-port/knn-jni-rs/target/release/libopensearchknn_faiss.dylib"
+        if (Os.isFamily(Os.FAMILY_MAC)) {
+            copy {
+                from rustLib
+                into releaseDir
+                rename { 'libopensearchknn_faiss.dylib' }
+            }
+            copy {
+                from rustLib
+                into releaseDir
+                rename { 'libopensearchknn_common.dylib' }
+            }
+            // Verify libnmslib.dylib exists (required runtime dependency)
+            def nmslibLib = file("${releaseDir}/libnmslib.dylib")
+            if (!nmslibLib.exists()) {
+                throw new GradleException(
+                    "libnmslib.dylib not found in ${releaseDir}. " +
+                    "Build C++ dependencies first with: ./gradlew buildJniLib"
+                )
+            }
+            // Fix dynamic library path for libnmslib
+            ant.exec(executable: 'install_name_tool', failonerror: false) {
+                arg(value: '-change')
+                arg(value: 'libnmslib.dylib')
+                arg(value: "${releaseDir}/libnmslib.dylib")
+                arg(value: "${releaseDir}/libopensearchknn_faiss.dylib")
+            }
+            ant.exec(executable: 'install_name_tool', failonerror: false) {
+                arg(value: '-change')
+                arg(value: 'libnmslib.dylib')
+                arg(value: "${releaseDir}/libnmslib.dylib")
+                arg(value: "${releaseDir}/libopensearchknn_common.dylib")
+            }
+            // Create symlinks for all expected library names (SIMD variants + .jnilib)
+            // The Rust library is a single binary that handles all CPU features internally
+            def allNames = [
+                'libopensearchknn_faiss.jnilib',
+                'libopensearchknn_faiss_avx2.dylib',
+                'libopensearchknn_faiss_avx2.jnilib',
+                'libopensearchknn_faiss_avx512.dylib',
+                'libopensearchknn_faiss_avx512.jnilib',
+                'libopensearchknn_faiss_avx512_spr.dylib',
+                'libopensearchknn_faiss_avx512_spr.jnilib',
+                'libopensearchknn_common.jnilib',
+                'libopensearchknn_nmslib.dylib',
+                'libopensearchknn_nmslib.jnilib',
+                'libopensearchknn_simd.dylib',
+                'libopensearchknn_simd.jnilib',
+                'libopensearchknn_simd_avx2.dylib',
+                'libopensearchknn_simd_avx2.jnilib',
+                'libopensearchknn_simd_avx512.dylib',
+                'libopensearchknn_simd_avx512.jnilib',
+                'libopensearchknn_simd_avx512_spr.dylib',
+                'libopensearchknn_simd_avx512_spr.jnilib',
+            ]
+            allNames.each { name ->
+                ant.exec(executable: 'ln', dir: releaseDir, failonerror: false) {
+                    arg(value: '-sf')
+                    arg(value: 'libopensearchknn_faiss.dylib')
+                    arg(value: name)
+                }
+            }
+        } else {
+            // Linux: .so files
+            def rustLibLinux = "$rootDir/jni/rust-port/knn-jni-rs/target/release/libopensearchknn_faiss.so"
+            copy {
+                from rustLibLinux
+                into releaseDir
+            }
+            copy {
+                from rustLibLinux
+                into releaseDir
+                rename { 'libopensearchknn_common.so' }
+            }
+        }
+        logger.lifecycle("Rust JNI library deployed to ${releaseDir}")
+    }
+}
+
+tasks.register('buildRustJniTest', Test) {
+    description = 'Run JNI boot tests with the Rust library'
+    group = 'verification'
+    dependsOn deployRustJniLib
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    systemProperty 'tests.security.manager', 'false'
+    systemProperty "java.library.path", "$rootDir/jni/build/release"
+    systemProperty "jdk.attach.allowAttachSelf", true
+    // Disable AVX settings that require cluster state (not available in unit tests)
+    systemProperty "knn.faiss.avx512.disabled", "true"
+    systemProperty "knn.faiss.avx512_spr.disabled", "true"
+    systemProperty "knn.faiss.avx2.disabled", "true"
+    include '**/*BT*'
+    // KNNLibraryLoaderBT tests SIMD variant loading which requires KNNSettings cluster state.
+    // The Rust JNI is a single binary handling all CPU features — variant loading is N/A.
+    exclude '**/KNNLibraryLoaderBT*'
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        environment('PATH', System.getenv('PATH') + ";$rootDir/jni/build/release")
+    }
+}
+
+// When -Prust is set, swap C++ JNI for Rust JNI in the build pipeline.
+// The Rust library links against libfaiss statically, so it needs the C++ Faiss
+// library to be built first. If it's already built, skip cmake/buildJniLib.
+if (project.hasProperty('rust')) {
+    logger.lifecycle("Rust JNI enabled")
+
+    def faissLibExists = file("$rootDir/jni/build/external/faiss/faiss/libfaiss.a").exists()
+    if (faissLibExists) {
+        // Faiss already built — skip C++ pipeline, just build+deploy Rust
+        tasks.named('cmakeJniLib').configure { enabled = false }
+        tasks.named('buildJniLib').configure {
+            enabled = false
+            finalizedBy 'deployRustJniLib'
+        }
+        logger.lifecycle("  Faiss already built, skipping cmakeJniLib/buildJniLib")
+    } else {
+        // Faiss not built — let cmake/build run first, then deploy Rust on top
+        logger.lifecycle("  Faiss not built yet, will build C++ deps first then deploy Rust")
+        tasks.named('buildJniLib').configure {
+            finalizedBy 'deployRustJniLib'
+        }
+    }
+
+    // buildJniTest should use the Rust library
+    tasks.named('buildJniTest').configure {
+        dependsOn 'deployRustJniLib'
+    }
+}
+
 test {
-    dependsOn buildJniTest
+    dependsOn project.hasProperty('rust') ? 'buildRustJniTest' : 'buildJniTest'
     // This will ensure that Unit test also uses optimized Vector Scorers and Pananma APIs
     jvmArgs '--add-modules=jdk.incubator.vector'
     systemProperty 'tests.security.manager', 'false'

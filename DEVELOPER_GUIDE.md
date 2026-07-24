@@ -263,6 +263,99 @@ cd jni
 cmake . -DAVX2_ENABLED=true -DAVX512_ENABLED=true -DAVX512_SPR_ENABLED=true
 ```
 
+### Rust JNI (Alternative to C++ JNI)
+
+An experimental Rust implementation of the JNI layer is available as an alternative to the default C++ JNI.
+Both produce the same shared library (`libopensearchknn_faiss`) with identical JNI symbol exports, so they
+are drop-in replacements for each other. The Rust implementation provides memory safety guarantees and
+panic-safe JNI boundaries.
+
+#### Prerequisites (Rust JNI only)
+
+In addition to the standard build prerequisites, you need:
+
+- Rust toolchain (1.70+): `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+#### Building
+
+**Use the Rust JNI:**
+
+```bash
+# Build everything with Rust JNI (C++ deps + Rust library)
+./gradlew build -Prust
+```
+
+This builds the C++ Faiss/NMSLIB dependencies first, then builds the Rust JNI library
+and deploys it as a drop-in replacement. All SIMD variant symlinks are created automatically.
+
+> **Note:** After `./gradlew clean` or on first build, add `-Dbuild.lib.apply_patches=false` 
+> to avoid CMake patch conflicts:
+> ```bash
+> ./gradlew build -Prust -Dbuild.lib.apply_patches=false
+> ```
+> If the Gradle daemon can't find `cmake` or `cargo`, restart it with `./gradlew --stop` first.
+
+**Switching back to C++ JNI:**
+
+```bash
+./gradlew build
+```
+
+Without `-Prust`, the standard C++ libraries are built and used.
+
+**Fast iteration** (if C++ deps already built, just rebuild/deploy Rust):
+
+```bash
+./gradlew deployRustJniLib
+```
+
+> This requires `libnmslib.dylib` to exist in `jni/build/release/` (built by `buildJniLib`).
+> If missing, run `./gradlew buildJniLib` first.
+
+#### Gradle Tasks
+
+| Task | Description |
+|------|-------------|
+| `./gradlew build -Prust` | Full build with Rust JNI |
+| `./gradlew deployRustJniLib` | Build and deploy Rust only (fast, skips C++ rebuild) |
+| `./gradlew buildRustJniLib` | Compile Rust only (no deploy) |
+| `./gradlew buildRustJniTest` | Run JNI boot tests with Rust library |
+| `./gradlew build` | Standard build with C++ JNI (default) |
+
+#### Running Rust Unit Tests Directly
+
+```bash
+cd jni/rust-port/knn-jni-rs
+KNN_JNI_STATIC=1 cargo test
+```
+
+#### Current Status
+
+| Feature | C++ JNI | Rust JNI |
+|---------|---------|----------|
+| Faiss HNSW (create, search, train) | Full | Full |
+| Faiss IVF/PQ (create, train) | Full | Full |
+| Faiss binary index | Full | Partial (ADC stub) |
+| NMSLIB | Full | Not implemented (deprecated engine) |
+| SIMD similarity | Full | Full (NEON + AVX512) |
+| Stream I/O (IndexInput/Output) | Full | Full |
+| Memory safety | Manual | Compile-time enforced |
+| Panic safety | UB on unwind | catch_unwind at boundary |
+
+#### Project Layout
+
+```
+jni/rust-port/knn-jni-rs/
+├── Cargo.toml          # Rust build configuration
+├── build.rs            # Links against libfaiss, libnmslib, libomp
+├── csrc/
+│   └── knn_shim.cpp   # Thin C++ shim for vtable operations (~400 lines)
+├── src/                # Rust source (17 modules, ~14,500 lines)
+└── tests/java/         # Java integration tests
+```
+
+See `jni/rust-port/REWRITE_REPORT.html` for the full technical report.
+
 ## Run OpenSearch k-NN
 
 ### Run Single-node Cluster Locally

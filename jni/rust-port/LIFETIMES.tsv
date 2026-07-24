@@ -1,0 +1,29 @@
+file	symbol	type	ownership_class	confidence	notes
+jni_util.h	JNIUtil::vm	JavaVM*	borrowed-static	high	Set in Initialize(), lives for JVM lifetime. Never freed by us.
+jni_util.h	JNIUtil::cachedClasses	unordered_map<string, jclass>	owned-global-ref	high	Global refs created in Initialize(), freed in Uninitialize()
+jni_util.h	JNIUtil::cachedMethods	unordered_map<string, jmethodID>	borrowed-static	high	Method IDs are stable for JVM lifetime, no free needed
+jni_util.h	JNIReleaseElements::release_func	function<void()>	owned	high	RAII destructor calls it; move semantics
+faiss_wrapper.h	InitIndex return (jlong)	faiss::Index*	owned-by-java	high	Java holds pointer as jlong, freed by Free() call
+faiss_wrapper.h	LoadIndex return (jlong)	faiss::Index*	owned-by-java	high	Allocated by faiss::read_index, freed by Free()
+faiss_wrapper.h	LoadBinaryIndex return (jlong)	faiss::IndexBinary*	owned-by-java	high	Allocated by faiss::read_index_binary, freed by Free()
+faiss_wrapper.h	InitSharedIndexState return (jlong)	AlignedTable<float>*	owned-by-java	high	new'd, freed by FreeSharedIndexState()
+faiss_wrapper.h	LoadIndexWithStream indexReader	faiss::Index*	owned-by-java	high	Allocated by faiss, returned as jlong
+faiss_wrapper.cpp	IDSelectorJlongBitmap::bitmap	const jlong*	borrowed-jni	high	Points into JNI array elements, released after search
+faiss_wrapper.cpp	QueryIndex rawQueryvector	float*	borrowed-jni	high	GetFloatArrayElements, released after use
+faiss_wrapper.cpp	QueryIndex_WithFilter filteredIdsArray	jlong*	borrowed-jni	high	GetLongArrayElements, released after use
+faiss_wrapper.cpp	CreateIndexFromTemplate inputVectors	vector<float>*	owned-transfer	high	reinterpret_cast from jlong, explicitly deleted after use
+faiss_wrapper.cpp	CreateBinaryIndexFromTemplate inputVectors	vector<uint8_t>*	owned-transfer	high	reinterpret_cast from jlong, explicitly deleted after use
+faiss_wrapper.cpp	CreateByteIndexFromTemplate inputVectors	vector<int8_t>*	owned-transfer	high	reinterpret_cast from jlong, explicitly deleted after use
+faiss_wrapper.cpp	TrainIndex trainingVectorsPointerCpp	vector<float>*	borrowed	high	reinterpret_cast from jlong, NOT deleted here (Java frees)
+faiss_wrapper.cpp	TrainBinaryIndex trainingVectorsPointerCpp	vector<uint8_t>*	borrowed	high	Same - not deleted here
+faiss_wrapper.cpp	TrainByteIndex trainingVectorsPointerCpp	vector<int8_t>*	borrowed	high	Same - not deleted here
+faiss_wrapper.cpp	indexWriter (unique_ptr<faiss::Index>)	unique_ptr	owned-local	high	Created locally, freed when scope ends
+faiss_wrapper.cpp	LoadIndexWithStreamADC alteredIdMap	faiss::IndexIDMap*	owned-by-java	high	new'd, returned as jlong for Java to free later
+faiss_wrapper.cpp	LoadIndexWithStreamADC alteredStorage	FaissIndexBQ*	owned-by-parent	high	Owned by alteredIndexHNSW (own_fields=true)
+faiss_wrapper.cpp	LoadIndexWithStreamADC alteredIndexHNSW	faiss::IndexHNSW*	owned-by-parent	high	Owned by alteredIdMap (own_fields=true)
+faiss_wrapper.cpp	SetSharedIndexState alignTable	AlignedTable<float>*	borrowed	high	Pointer shared across multiple indices, not freed here
+faiss_index_service.h	IndexService (interface)	virtual	trait-object	high	Stateless service, passed by pointer from Java
+nmslib_wrapper.cpp	index (loaded)	similarity::Index<float>*	owned-by-java	high	Created via nmslib API, freed by Free()
+commons.cpp	vectorsAddress (jlong input)	vector<T>*	owned-by-java	high	Points to vectors allocated by Java via JNICommons
+org_opensearch_knn_jni_JNICommons.cpp	vectors (allocated)	vector<T>*	owned-by-java	high	new'd, returned as jlong, freed by freeVectors
+simd/	function pointers (compute_*)	function ptrs	static	high	Stateless, selected at init based on CPU features

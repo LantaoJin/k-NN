@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenSearch k-NN Plugin - Learning Guide</title>
+    <style>
+        :root {
+            --primary: #0055a6;
+            --primary-light: #e8f4fd;
+            --primary-dark: #003d7a;
+            --accent: #ff9900;
+            --text: #1a1a2e;
+            --text-light: #4a5568;
+            --bg: #ffffff;
+            --bg-alt: #f7f9fc;
+            --border: #e2e8f0;
+            --code-bg: #1e293b;
+            --code-text: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            background: var(--bg-alt);
+            border-right: 1px solid var(--border);
+            padding: 24px 0;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 16px;
+        }
+
+        .sidebar-header h2 {
+            font-size: 15px;
+            color: var(--primary);
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .sidebar nav ul {
+            list-style: none;
+        }
+
+        .sidebar nav > ul > li {
+            margin-bottom: 2px;
+        }
+
+        .sidebar nav a {
+            display: block;
+            padding: 6px 20px;
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar nav a:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+            border-left-color: var(--primary);
+        }
+
+        .sidebar nav a.chapter-link {
+            font-weight: 600;
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        /* Main Content */
+        .main {
+            margin-left: var(--sidebar-width);
+            max-width: 900px;
+            padding: 48px 60px;
+        }
+
+        /* Header */
+        .page-header {
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .page-header h1 {
+            font-size: 36px;
+            color: var(--primary-dark);
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+
+        .page-header .subtitle {
+            font-size: 18px;
+            color: var(--text-light);
+            font-weight: 400;
+        }
+
+        /* Chapter Headings */
+        .chapter {
+            margin-top: 64px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chapter:first-of-type {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .chapter-number {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 28px;
+            color: var(--text);
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -0.3px;
+        }
+
+        h3 {
+            font-size: 20px;
+            color: var(--text);
+            font-weight: 600;
+            margin-top: 36px;
+            margin-bottom: 12px;
+        }
+
+        h4 {
+            font-size: 16px;
+            color: var(--text);
+            font-weight: 600;
+            margin-top: 24px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+
+        li {
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        thead th {
+            background: var(--primary);
+            color: white;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        thead th:first-child {
+            border-radius: 6px 0 0 0;
+        }
+
+        thead th:last-child {
+            border-radius: 0 6px 0 0;
+        }
+
+        tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tbody tr:nth-child(even) {
+            background: var(--bg-alt);
+        }
+
+        tbody tr:hover {
+            background: var(--primary-light);
+        }
+
+        /* Code blocks */
+        pre {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 20px 24px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-size: 13px;
+            line-height: 1.6;
+            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace;
+        }
+
+        code {
+            background: #edf2f7;
+            color: #e53e3e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, monospace;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+
+        /* Syntax highlighting approximation */
+        .kw { color: #c792ea; }
+        .str { color: #c3e88d; }
+        .num { color: #f78c6c; }
+        .cmt { color: #676e95; font-style: italic; }
+        .fn { color: #82aaff; }
+
+        /* Info boxes */
+        .info-box {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 0 6px 6px 0;
+        }
+
+        .info-box.warning {
+            background: #fffbeb;
+            border-left-color: var(--warning);
+        }
+
+        .info-box.success {
+            background: #ecfdf5;
+            border-left-color: var(--success);
+        }
+
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .info-box strong {
+            color: var(--primary-dark);
+        }
+
+        /* Key files box */
+        .key-files {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 16px 0 24px;
+        }
+
+        .key-files h4 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .key-files ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .key-files li {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 12px;
+            color: var(--primary);
+            padding: 3px 0;
+        }
+
+        /* Architecture diagram */
+        .diagram {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .diagram pre {
+            background: none;
+            color: var(--text);
+            padding: 0;
+            margin: 0;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        /* JSON code styling */
+        .json .key { color: #82aaff; }
+        .json .string { color: #c3e88d; }
+        .json .number { color: #f78c6c; }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+        .badge-success { background: #ecfdf5; color: #059669; }
+        .badge-warning { background: #fffbeb; color: #d97706; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .sidebar {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+                padding: 32px 24px;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Scrollbar styling for sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h2>OpenSearch k-NN</h2>
+        <p>Learning Guide</p>
+    </div>
+    <nav>
+        <ul>
+            <li><a href="#chapter-1" class="chapter-link">1. Overview &amp; Architecture</a></li>
+            <li><a href="#chapter-2" class="chapter-link">2. Vectors, Spaces &amp; Data Types</a></li>
+            <li><a href="#chapter-3" class="chapter-link">3. KNN Engines</a></li>
+            <li><a href="#chapter-4" class="chapter-link">4. Index Mapping</a></li>
+            <li><a href="#chapter-5" class="chapter-link">5. Indexing Pipeline</a></li>
+            <li><a href="#chapter-6" class="chapter-link">6. Search Pipeline</a></li>
+            <li><a href="#chapter-7" class="chapter-link">7. JNI Layer</a></li>
+            <li><a href="#chapter-8" class="chapter-link">8. Memory Management</a></li>
+            <li><a href="#chapter-9" class="chapter-link">9. Memory-Optimized Search</a></li>
+            <li><a href="#chapter-10" class="chapter-link">10. Quantization</a></li>
+            <li><a href="#chapter-11" class="chapter-link">11. Model Training</a></li>
+            <li><a href="#chapter-12" class="chapter-link">12. Plugin Framework</a></li>
+            <li><a href="#chapter-13" class="chapter-link">13. Advanced Features</a></li>
+            <li><a href="#chapter-14" class="chapter-link">14. Build &amp; Development</a></li>
+            <li><a href="#appendix-reading" class="chapter-link">Appendix: Reading Order</a></li>
+            <li><a href="#appendix-glossary" class="chapter-link">Appendix: Glossary</a></li>
+        </ul>
+    </nav>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+
+<header class="page-header">
+    <h1>OpenSearch k-NN Plugin</h1>
+    <p class="subtitle">A comprehensive guide to the codebase, from foundational concepts to advanced internals.</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 1 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-1">
+    <span class="chapter-number">Chapter 1</span>
+    <h2>Overview and Architecture</h2>
+
+    <h3>What is OpenSearch k-NN?</h3>
+    <p>OpenSearch k-NN is a plugin that enables <strong>approximate nearest neighbor (ANN) search</strong> on billions of documents across thousands of dimensions. It integrates with OpenSearch's query engine to allow vector similarity search alongside traditional text search.</p>
+
+    <h3>Use Cases</h3>
+    <ul>
+        <li>Product recommendations</li>
+        <li>Fraud detection</li>
+        <li>Image and video search</li>
+        <li>Semantic / related document search</li>
+        <li>Retrieval-Augmented Generation (RAG) for LLMs</li>
+    </ul>
+
+    <h3>High-Level Architecture</h3>
+    <div class="diagram">
+<pre>
+&#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;
+&#9474;                       OpenSearch Core                         &#9474;
+&#9500;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9508;
+&#9474;                        k-NN Plugin                            &#9474;
+&#9474;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9474;
+&#9474;  &#9474;  REST   &#9474;  &#9474; Transport &#9474;  &#9474; Mapper &#9474;  &#9474;  Codec   &#9474;  &#9474;
+&#9474;  &#9474;  Layer  &#9474;  &#9474;  Actions  &#9474;  &#9474; Layer  &#9474;  &#9474;  Layer   &#9474;  &#9474;
+&#9474;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9492;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9474;
+&#9474;       &#9474;            &#9474;           &#9474;           &#9474;            &#9474;
+&#9474;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9474;
+&#9474;  &#9474;            Engine Abstraction Layer                    &#9474;  &#9474;
+&#9474;  &#9474;   &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;    &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;    &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;        &#9474;  &#9474;
+&#9474;  &#9474;   &#9474; Faiss &#9474;    &#9474; Lucene &#9474;    &#9474; NMSLIB  &#9474;        &#9474;  &#9474;
+&#9474;  &#9474;   &#9492;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9496;    &#9492;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9496;    &#9492;&#9472;&#9472;&#9472;&#9472;&#9516;&#9472;&#9472;&#9472;&#9472;&#9496;        &#9474;  &#9474;
+&#9474;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9474;
+&#9474;            &#9474;              &#9474;              &#9474;                 &#9474;
+&#9474;  &#9484;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9524;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9488;  &#9474;
+&#9474;  &#9474;                 JNI Layer (C++)                        &#9474;  &#9474;
+&#9474;  &#9474;       faiss_wrapper  &#9474;  nmslib_wrapper               &#9474;  &#9474;
+&#9474;  &#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;  &#9474;
+&#9492;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9472;&#9496;
+</pre>
+    </div>
+
+    <h3>Project Structure</h3>
+<pre><code>k-NN/
+&#9500;&#9472;&#9472; src/main/java/org/opensearch/knn/
+&#9474;   &#9500;&#9472;&#9472; plugin/          # Plugin entry point, REST handlers, transport
+&#9474;   &#9500;&#9472;&#9472; index/           # Core indexing: mapper, codec, query, engine, memory
+&#9474;   &#9500;&#9472;&#9472; jni/             # Java JNI bindings to native libraries
+&#9474;   &#9500;&#9472;&#9472; memoryoptsearch/ # Memory-optimized search (reads index from disk)
+&#9474;   &#9500;&#9472;&#9472; quantization/    # Vector quantization framework
+&#9474;   &#9500;&#9472;&#9472; training/        # Model training for IVF/PQ methods
+&#9474;   &#9500;&#9472;&#9472; indices/         # Model storage and management
+&#9474;   &#9500;&#9472;&#9472; search/          # Search extensions (MMR, processors)
+&#9474;   &#9500;&#9472;&#9472; common/          # Shared utilities, exceptions, feature flags
+&#9474;   &#9492;&#9472;&#9472; profile/         # Query profiling/metrics
+&#9500;&#9472;&#9472; jni/                 # C++ native code (Faiss/NMSLIB wrappers)
+&#9474;   &#9500;&#9472;&#9472; src/             # JNI implementation files
+&#9474;   &#9500;&#9472;&#9472; include/         # Header files
+&#9474;   &#9500;&#9472;&#9472; external/        # Git submodules for faiss, nmslib
+&#9474;   &#9492;&#9472;&#9472; patches/         # Patches applied to external libraries
+&#9492;&#9472;&#9472; src/test/            # Unit and integration tests</code></pre>
+
+    <h3>Entry Point</h3>
+    <p>The plugin entry point is <code>KNNPlugin.java</code> which implements OpenSearch's plugin interfaces:</p>
+    <ul>
+        <li>Registers the <code>knn_vector</code> field type</li>
+        <li>Registers REST endpoints and transport actions</li>
+        <li>Sets up the custom codec for vector indexing</li>
+        <li>Initializes native libraries and memory management</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 2 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-2">
+    <span class="chapter-number">Chapter 2</span>
+    <h2>Core Concepts - Vectors, Spaces, and Data Types</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/index/SpaceType.java</li>
+            <li>src/main/java/org/opensearch/knn/index/VectorDataType.java</li>
+            <li>src/main/java/org/opensearch/knn/index/KNNVectorSimilarityFunction.java</li>
+        </ul>
+    </div>
+
+    <h3>Vector Data Types</h3>
+    <p>The plugin supports multiple data types for vectors:</p>
+
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Description</th><th>Storage per Dimension</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>FLOAT</code></td><td>32-bit floating point</td><td>4 bytes</td></tr>
+            <tr><td><code>BYTE</code></td><td>8-bit signed integer (-128 to 127)</td><td>1 byte</td></tr>
+            <tr><td><code>BINARY</code></td><td>Binary vectors (bit-level)</td><td>1/8 byte</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Space Types (Distance Metrics)</h3>
+    <p>Space types define how similarity between vectors is measured:</p>
+
+    <table>
+        <thead>
+            <tr><th>Space Type</th><th>Description</th><th>Score Translation</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>L2</code> (Euclidean)</td><td>Squared L2 distance</td><td><code>1 / (1 + rawScore)</code></td></tr>
+            <tr><td><code>L1</code> (Manhattan)</td><td>Sum of absolute differences</td><td><code>1 / (1 + rawScore)</code></td></tr>
+            <tr><td><code>LINF</code> (Chebyshev)</td><td>Maximum absolute difference</td><td><code>1 / (1 + rawScore)</code></td></tr>
+            <tr><td><code>COSINESIMIL</code></td><td>Cosine similarity</td><td>Engine-specific</td></tr>
+            <tr><td><code>INNER_PRODUCT</code></td><td>Dot product</td><td>Varies by engine</td></tr>
+            <tr><td><code>HAMMING</code></td><td>Hamming distance (binary)</td><td><code>1 / (1 + rawScore)</code></td></tr>
+        </tbody>
+    </table>
+
+    <h3>Score Translation</h3>
+    <p>Each space type implements <code>scoreTranslation(float rawScore)</code> which converts the raw distance/similarity from the native library into an OpenSearch-compatible score (higher = more relevant).</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 3 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-3">
+    <span class="chapter-number">Chapter 3</span>
+    <h2>KNN Engines - Faiss, Lucene, and NMSLIB</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/index/engine/KNNEngine.java</li>
+            <li>src/main/java/org/opensearch/knn/index/engine/KNNLibrary.java</li>
+            <li>src/main/java/org/opensearch/knn/index/engine/faiss/Faiss.java</li>
+            <li>src/main/java/org/opensearch/knn/index/engine/lucene/Lucene.java</li>
+            <li>src/main/java/org/opensearch/knn/index/engine/nmslib/Nmslib.java</li>
+        </ul>
+    </div>
+
+    <h3>Engine Overview</h3>
+
+    <h4>Faiss (Facebook AI Similarity Search)</h4>
+    <ul>
+        <li>Most feature-rich engine</li>
+        <li>Supports: HNSW, IVF, Product Quantization (PQ), Scalar Quantization (SQ)</li>
+        <li>Native C++ library accessed via JNI</li>
+        <li>Supports training-based methods (IVF requires training)</li>
+        <li>Supports binary vectors and all distance metrics</li>
+    </ul>
+
+    <h4>Lucene</h4>
+    <ul>
+        <li>Built into the JVM (no native library needed)</li>
+        <li>Supports: HNSW, Flat (brute force)</li>
+        <li>Good for smaller datasets or when JNI is not available</li>
+        <li>Supports byte and float vectors</li>
+    </ul>
+
+    <h4>NMSLIB (Non-Metric Space Library)</h4>
+    <ul>
+        <li>Legacy engine (original engine for the plugin)</li>
+        <li>Supports: HNSW only</li>
+        <li>Native C++ library accessed via JNI</li>
+        <li>Being phased out in favor of Faiss</li>
+    </ul>
+
+    <h3>Engine Resolution</h3>
+    <p><code>EngineResolver.java</code> selects the appropriate engine based on:</p>
+    <ol>
+        <li>User-specified engine in mapping</li>
+        <li>Method type (some methods only available on certain engines)</li>
+        <li>Vector data type compatibility</li>
+        <li>Compression level requirements</li>
+    </ol>
+
+    <h3>Algorithm: HNSW (Hierarchical Navigable Small World)</h3>
+    <p>The primary algorithm used across all engines:</p>
+<pre><code>Parameters:
+  M              &mdash; Number of connections per node (graph connectivity)
+  ef_construction &mdash; Size of dynamic candidate list during indexing
+  ef_search       &mdash; Size of dynamic candidate list during search
+
+Trade-offs:
+  Higher M              &rarr; better recall, more memory, slower indexing
+  Higher ef_construction &rarr; better graph quality, slower indexing
+  Higher ef_search       &rarr; better recall, slower search</code></pre>
+
+    <h3>Algorithm: IVF (Inverted File Index)</h3>
+    <p>Available in Faiss only:</p>
+<pre><code>Parameters:
+  nlist   &mdash; Number of cluster centroids
+  nprobes &mdash; Number of clusters to search at query time
+
+Requires a training phase to learn cluster centroids.</code></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 4 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-4">
+    <span class="chapter-number">Chapter 4</span>
+    <h2>Index Mapping and Field Types</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/index/mapper/KNNVectorFieldMapper.java</li>
+            <li>src/main/java/org/opensearch/knn/index/mapper/KNNVectorFieldType.java</li>
+            <li>src/main/java/org/opensearch/knn/index/mapper/Mode.java</li>
+            <li>src/main/java/org/opensearch/knn/index/mapper/CompressionLevel.java</li>
+        </ul>
+    </div>
+
+    <h3>The <code>knn_vector</code> Field Type</h3>
+    <p>When you create a mapping with <code>"type": "knn_vector"</code>, <code>KNNVectorFieldMapper</code> handles:</p>
+    <ol>
+        <li>Parsing mapping parameters (dimension, method, model_id, etc.)</li>
+        <li>Validating vector data at index time</li>
+        <li>Storing vectors in doc values for search</li>
+    </ol>
+
+    <h3>Mapping Modes</h3>
+    <table>
+        <thead>
+            <tr><th>Mode</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>NOT_CONFIGURED</code></td><td>Default &mdash; engine decides</td></tr>
+            <tr><td><code>IN_MEMORY</code></td><td>Traditional approach &mdash; load index into memory</td></tr>
+            <tr><td><code>ON_DISK</code></td><td>Memory-optimized search from disk</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Compression Levels</h3>
+    <table>
+        <thead>
+            <tr><th>Level</th><th>Description</th><th>Typical Encoding</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>x1</code></td><td>No compression</td><td>Flat (original vectors)</td></tr>
+            <tr><td><code>x2</code></td><td>2x compression</td><td>FP16 scalar quantization</td></tr>
+            <tr><td><code>x4</code></td><td>4x compression</td><td>8-bit scalar quantization</td></tr>
+            <tr><td><code>x8</code></td><td>8x compression</td><td>4-bit quantization</td></tr>
+            <tr><td><code>x16</code></td><td>16x compression</td><td>2-bit or binary quantization</td></tr>
+            <tr><td><code>x32</code></td><td>32x compression</td><td>1-bit binary quantization</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Example Mapping</h3>
+<pre><code>{
+  "properties": {
+    "my_vector": {
+      "type": "knn_vector",
+      "dimension": 768,
+      "method": {
+        "name": "hnsw",
+        "space_type": "l2",
+        "engine": "faiss",
+        "parameters": {
+          "m": 16,
+          "ef_construction": 256,
+          "encoder": {
+            "name": "sq",
+            "parameters": { "type": "fp16" }
+          }
+        }
+      }
+    }
+  }
+}</code></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 5 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-5">
+    <span class="chapter-number">Chapter 5</span>
+    <h2>Indexing Pipeline - Codecs and Native Index Building</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/index/codec/KNN80Codec/</li>
+            <li>src/main/java/org/opensearch/knn/index/codec/nativeindex/</li>
+            <li>src/main/java/org/opensearch/knn/index/codec/KNNCodecService.java</li>
+            <li>src/main/java/org/opensearch/knn/index/codec/transfer/</li>
+        </ul>
+    </div>
+
+    <h3>How Vectors Get Indexed</h3>
+    <div class="diagram">
+<pre>
+Document Indexing Flow:
+
+1. Document arrives &rarr; KNNVectorFieldMapper validates &amp; parses vector
+2. Vector stored in Lucene doc values (binary format)
+3. During segment flush/merge:
+   a. KNN codec reads vectors from doc values
+   b. Vectors transferred to native library via JNI
+   c. Native library builds the index (HNSW graph / IVF clusters)
+   d. Native index written as a sidecar file alongside the segment
+</pre>
+    </div>
+
+    <h3>Codec Versioning</h3>
+    <p>Each OpenSearch version has its own codec (e.g., <code>KNN1040Codec</code>). Backward-compatible codecs exist for reading older segments:</p>
+    <ul>
+        <li><code>KNN80Codec</code> &mdash; Oldest supported</li>
+        <li><code>KNN910Codec</code>, <code>KNN920Codec</code>, ... (track Lucene/OpenSearch versions)</li>
+        <li><code>KNN1040Codec</code> &mdash; Latest</li>
+    </ul>
+
+    <h3>Native Index Build Strategies</h3>
+    <p>The <code>nativeindex/</code> package handles building the native ANN index:</p>
+    <ol>
+        <li><strong>Default Strategy</strong>: Build index on the data node during segment flush</li>
+        <li><strong>Remote Build Strategy</strong>: Offload index building to a remote service (for large indices)</li>
+    </ol>
+
+    <h3>The KNNCodecService</h3>
+    <p>Wraps the standard Lucene codec to inject:</p>
+    <ul>
+        <li>Custom <code>KNNVectorsFormat</code> for writing/reading vector data</li>
+        <li>Custom doc values format for vector storage</li>
+        <li>Format negotiation based on engine type</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 6 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-6">
+    <span class="chapter-number">Chapter 6</span>
+    <h2>Search Pipeline - Queries and Scoring</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/index/query/KNNQueryBuilder.java</li>
+            <li>src/main/java/org/opensearch/knn/index/query/KNNQuery.java</li>
+            <li>src/main/java/org/opensearch/knn/index/query/KNNWeight.java</li>
+            <li>src/main/java/org/opensearch/knn/index/query/nativelib/NativeEngineKnnVectorQuery.java</li>
+            <li>src/main/java/org/opensearch/knn/index/query/exactsearch/ExactSearcher.java</li>
+        </ul>
+    </div>
+
+    <h3>Query Flow</h3>
+    <div class="diagram">
+<pre>
+User Query (JSON)
+    &rarr; KNNQueryBuilder (parses request)
+    &rarr; KNNQuery (Lucene Query object)
+    &rarr; KNNWeight (per-segment execution)
+        &#9500;&#9472;&#9472; Native Engine path: JNI call to search the ANN index
+        &#9500;&#9472;&#9472; Lucene Engine path: Lucene's built-in kNN search
+        &#9492;&#9472;&#9472; Exact Search path: brute-force when filter is very selective
+    &rarr; Scored documents returned to OpenSearch
+</pre>
+    </div>
+
+    <h3>KNNQueryBuilder</h3>
+    <p>The entry point for k-NN queries. Supports:</p>
+    <ul>
+        <li><code>k</code>: Number of nearest neighbors to return</li>
+        <li><code>vector</code>: The query vector</li>
+        <li><code>filter</code>: Pre-filter documents before ANN search</li>
+        <li><code>method_parameters</code>: Runtime search params (e.g., <code>ef_search</code>)</li>
+        <li><code>rescore</code>: Two-phase approach (ANN first, then exact re-scoring)</li>
+        <li><code>min_score</code> / <code>max_distance</code>: Radial search (radius-based, not top-k)</li>
+    </ul>
+
+    <h3>Example Query</h3>
+<pre><code>{
+  "query": {
+    "knn": {
+      "my_vector": {
+        "vector": [0.1, 0.2, ...],
+        "k": 10,
+        "filter": { "term": { "category": "electronics" } },
+        "method_parameters": { "ef_search": 512 }
+      }
+    }
+  }
+}</code></pre>
+
+    <h3>Search Strategies</h3>
+    <table>
+        <thead>
+            <tr><th>Strategy</th><th>Description</th><th>When Used</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>ANN Search</strong></td><td>Uses pre-built graph/index</td><td>Default for all queries</td></tr>
+            <tr><td><strong>Exact Search</strong></td><td>Brute-force linear scan</td><td>Filter eliminates most docs</td></tr>
+            <tr><td><strong>Rescore Search</strong></td><td>ANN + exact re-rank</td><td>User specifies oversample_factor</td></tr>
+            <tr><td><strong>Radial Search</strong></td><td>All vectors within threshold</td><td>min_score or max_distance set</td></tr>
+        </tbody>
+    </table>
+
+    <h3>KNNWeight - The Heart of Search</h3>
+    <p><code>KNNWeight</code> (and <code>DefaultKNNWeight</code>) implements <code>Weight.scorer()</code>:</p>
+    <ul>
+        <li>Loads the native index from cache (or disk)</li>
+        <li>Decides between ANN vs exact search based on filter ratio</li>
+        <li>Calls JNI to execute the search on native libraries</li>
+        <li>Converts results to Lucene scorers</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 7 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-7">
+    <span class="chapter-number">Chapter 7</span>
+    <h2>JNI Layer - Native Library Integration</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/jni/ (Java side)</li>
+            <li>jni/src/ (C++ side)</li>
+            <li>jni/include/ (C++ headers)</li>
+        </ul>
+    </div>
+
+    <h3>Architecture</h3>
+    <div class="diagram">
+<pre>
+Java Layer                          C++ Layer
+&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;                   &mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;
+FaissService.java    &mdash;&mdash;JNI&mdash;&rarr;    org_opensearch_knn_jni_FaissService.cpp
+NmslibService.java   &mdash;&mdash;JNI&mdash;&rarr;    org_opensearch_knn_jni_NmslibService.cpp
+JNICommons.java      &mdash;&mdash;JNI&mdash;&rarr;    org_opensearch_knn_jni_JNICommons.cpp
+                                         |
+                                    faiss_wrapper.cpp
+                                    nmslib_wrapper.cpp
+                                         |
+                                  +------+------+
+                                  |  libfaiss   |
+                                  |  libnmslib  |
+                                  +-------------+
+</pre>
+    </div>
+
+    <h3>Key JNI Operations</h3>
+    <table>
+        <thead>
+            <tr><th>Operation</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>createIndex</code></td><td>Build an ANN index from vectors</td></tr>
+            <tr><td><code>loadIndex</code></td><td>Load a pre-built index into memory</td></tr>
+            <tr><td><code>queryIndex</code></td><td>Search the loaded index for nearest neighbors</td></tr>
+            <tr><td><code>freeIndex</code></td><td>Release memory for a loaded index</td></tr>
+            <tr><td><code>trainIndex</code></td><td>Train an IVF/PQ model from sample data</td></tr>
+        </tbody>
+    </table>
+
+    <h3>SIMD Optimizations</h3>
+    <p>The <code>jni/src/simd/</code> directory contains platform-specific optimizations:</p>
+    <ul>
+        <li>Distance computation kernels optimized with SIMD instructions</li>
+        <li>Exposed via <code>SimdVectorComputeService</code></li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 8 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-8">
+    <span class="chapter-number">Chapter 8</span>
+    <h2>Memory Management and Caching</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/index/memory/NativeMemoryCacheManager.java</li>
+            <li>src/main/java/org/opensearch/knn/index/memory/NativeMemoryAllocation.java</li>
+            <li>src/main/java/org/opensearch/knn/index/memory/NativeMemoryLoadStrategy.java</li>
+            <li>src/main/java/org/opensearch/knn/index/KNNCircuitBreaker.java</li>
+        </ul>
+    </div>
+
+    <h3>Native Memory Cache</h3>
+    <p>When a segment is searched, its native ANN index is loaded into off-heap memory:</p>
+    <div class="diagram">
+<pre>
+Search Request
+    &rarr; Check NativeMemoryCacheManager
+        &#9500;&#9472;&#9472; Cache HIT: return pointer to loaded index
+        &#9492;&#9472;&#9472; Cache MISS:
+            1. Check circuit breaker (enough memory?)
+            2. Load index from disk via JNI
+            3. Store pointer in cache
+            4. Return pointer
+</pre>
+    </div>
+
+    <h3>Cache Eviction</h3>
+    <ul>
+        <li><strong>LRU-based</strong>: Least recently used indices evicted first</li>
+        <li><strong>Circuit Breaker</strong>: Prevents loading if total native memory exceeds threshold</li>
+        <li><strong>Expiry</strong>: Indices can expire after a configurable time</li>
+        <li><strong>Explicit Clear</strong>: Via the <code>/_plugins/_knn/clear_cache</code> API</li>
+    </ul>
+
+    <h3>Memory Settings</h3>
+    <p>Key settings in <code>KNNSettings.java</code>:</p>
+    <table>
+        <thead>
+            <tr><th>Setting</th><th>Description</th><th>Default</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>knn.memory.circuit_breaker.limit</code></td><td>Maximum native memory percentage</td><td>50%</td></tr>
+            <tr><td><code>knn.memory.circuit_breaker.enabled</code></td><td>Enable/disable the breaker</td><td>true</td></tr>
+            <tr><td><code>knn.cache.item.expiry.enabled</code></td><td>Enable time-based cache expiry</td><td>false</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Warmup</h3>
+    <div class="info-box">
+        <p>The warmup API (<code>/_plugins/_knn/warmup/{index}</code>) pre-loads all native indices into memory before search traffic arrives, avoiding cold-start latency.</p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 9 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-9">
+    <span class="chapter-number">Chapter 9</span>
+    <h2>Memory-Optimized Search</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/memoryoptsearch/ (entire package)</li>
+            <li>src/main/java/org/opensearch/knn/index/query/memoryoptsearch/MemoryOptimizedKNNWeight.java</li>
+        </ul>
+    </div>
+
+    <h3>Concept</h3>
+    <p>Traditional k-NN search loads the entire ANN graph into off-heap memory. Memory-optimized search reads the graph structure directly from disk using memory-mapped files, dramatically reducing memory requirements.</p>
+
+    <div class="diagram">
+<pre>
+Traditional (in-memory):
+  Disk &rarr; [Load full index into RAM] &rarr; Search in RAM
+
+Memory-Optimized (on-disk):
+  Disk &rarr; [Memory-map the file] &rarr; Traverse graph by reading pages on demand
+</pre>
+    </div>
+
+    <h3>Key Components</h3>
+    <ul>
+        <li><strong>FaissMemoryOptimizedSearcher</strong>: Reads Faiss HNSW index structure from mmap'd files</li>
+        <li><strong>FaissHnswGraph</strong>: Parses the HNSW graph structure (layers, neighbors) from raw bytes</li>
+        <li><strong>MMapVectorValues / MMapFloatVectorValues</strong>: Provides vector data from mmap'd storage</li>
+        <li><strong>MemorySegmentAddressExtractor</strong>: JDK version-specific APIs for memory segment access</li>
+    </ul>
+
+    <h3>Trade-offs</h3>
+    <table>
+        <thead>
+            <tr><th>Aspect</th><th>In-Memory</th><th>Memory-Optimized</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Memory usage</td><td>High (full index in RAM)</td><td>Low (OS page cache)</td></tr>
+            <tr><td>First query latency</td><td>High (load time)</td><td>Low (no preload needed)</td></tr>
+            <tr><td>Steady-state latency</td><td>Lower</td><td>Slightly higher (page faults)</td></tr>
+            <tr><td>Best for</td><td>Hot, frequently-searched indices</td><td>Large, infrequently-searched indices</td></tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 10 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-10">
+    <span class="chapter-number">Chapter 10</span>
+    <h2>Quantization</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/quantization/quantizer/ (implementations)</li>
+            <li>src/main/java/org/opensearch/knn/quantization/models/ (state and params)</li>
+            <li>src/main/java/org/opensearch/knn/quantization/factory/ (factory pattern)</li>
+            <li>src/main/java/org/opensearch/knn/quantization/sampler/ (training data sampling)</li>
+        </ul>
+    </div>
+
+    <h3>What is Quantization?</h3>
+    <p>Quantization reduces the memory footprint of vectors by representing them with fewer bits, trading some accuracy for significant space savings.</p>
+
+    <h3>Supported Quantization Types</h3>
+
+    <h4>Scalar Quantization (SQ) - Java-side</h4>
+    <table>
+        <thead>
+            <tr><th>Bits</th><th>Values per Dimension</th><th>Compression</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>1-bit</td><td>0 or 1</td><td>32x</td></tr>
+            <tr><td>2-bit</td><td>0, 1, 2, 3</td><td>16x</td></tr>
+            <tr><td>4-bit</td><td>0..15</td><td>8x</td></tr>
+        </tbody>
+    </table>
+
+    <h4>Faiss Engine Quantization</h4>
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Description</th><th>Compression</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>SQ (fp16)</td><td>Half-precision float per dimension</td><td>2x</td></tr>
+            <tr><td>SQ (8-bit)</td><td>8-bit integer per dimension</td><td>4x</td></tr>
+            <tr><td>PQ</td><td>Sub-vector codebook encoding</td><td>Variable (high)</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Quantization Pipeline</h3>
+    <div class="diagram">
+<pre>
+1. Training Phase:
+   Sample vectors &rarr; Compute quantization parameters (thresholds, codebooks)
+   &rarr; Store as QuantizationState
+
+2. Indexing Phase:
+   Full vector &rarr; Apply quantizer &rarr; Store compressed representation
+
+3. Search Phase:
+   Query vector &rarr; Compare against compressed vectors (asymmetric distance)
+</pre>
+    </div>
+
+    <h3>QuantizerFactory</h3>
+    <p>Uses registry pattern to create quantizers based on <code>QuantizationParams</code>:</p>
+<pre><code>QuantizerFactory.getQuantizer(ScalarQuantizationParams(SQType.ONE_BIT))
+  &rarr; returns OneBitScalarQuantizer</code></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 11 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-11">
+    <span class="chapter-number">Chapter 11</span>
+    <h2>Model Training</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/training/TrainingJob.java</li>
+            <li>src/main/java/org/opensearch/knn/training/TrainingJobRunner.java</li>
+            <li>src/main/java/org/opensearch/knn/training/VectorReader.java</li>
+            <li>src/main/java/org/opensearch/knn/indices/Model.java</li>
+            <li>src/main/java/org/opensearch/knn/indices/ModelDao.java</li>
+        </ul>
+    </div>
+
+    <h3>Why Training?</h3>
+    <p>Some ANN algorithms (IVF, PQ) require a <strong>training phase</strong> to learn data distribution before indexing. Training produces a <strong>model</strong> that is then used during index creation.</p>
+
+    <h3>Training Flow</h3>
+    <div class="diagram">
+<pre>
+1. User calls POST /_plugins/_knn/models/{model_id}/_train
+   - Specifies: training_index, training_field, method (ivf/pq params)
+
+2. TrainingJobRouter selects a node to run training
+
+3. VectorReader reads training vectors from the specified index
+
+4. TrainingJob:
+   a. Reads vectors into memory (FloatTrainingDataConsumer)
+   b. Calls JNI trainIndex() with vectors and parameters
+   c. Native library learns cluster centroids / codebooks
+   d. Model (binary blob) stored in system index .opensearch-knn-models
+
+5. Model can now be referenced in mappings via model_id
+</pre>
+    </div>
+
+    <h3>Model Lifecycle</h3>
+    <div class="info-box">
+        <p>
+            <strong>States:</strong> CREATED &rarr; TRAINING &rarr; CREATED (success) / FAILED<br>
+            <strong>Storage:</strong> <code>.opensearch-knn-models</code> system index<br>
+            <strong>Cache:</strong> ModelCache for fast access during indexing<br>
+            <strong>Deletion:</strong> ModelGraveyard tracks deleted models for cluster-wide cleanup
+        </p>
+    </div>
+
+    <h3>Using a Trained Model</h3>
+<pre><code>{
+  "properties": {
+    "my_vector": {
+      "type": "knn_vector",
+      "model_id": "my-ivf-model"
+    }
+  }
+}</code></pre>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 12 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-12">
+    <span class="chapter-number">Chapter 12</span>
+    <h2>Plugin Framework - REST APIs and Transport Actions</h2>
+
+    <div class="key-files">
+        <h4>Key Files</h4>
+        <ul>
+            <li>src/main/java/org/opensearch/knn/plugin/KNNPlugin.java</li>
+            <li>src/main/java/org/opensearch/knn/plugin/rest/ (REST handlers)</li>
+            <li>src/main/java/org/opensearch/knn/plugin/transport/ (transport actions)</li>
+            <li>src/main/java/org/opensearch/knn/plugin/stats/ (statistics)</li>
+        </ul>
+    </div>
+
+    <h3>REST API Endpoints</h3>
+    <table>
+        <thead>
+            <tr><th>Endpoint</th><th>Handler</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>GET /_plugins/_knn/stats</code></td><td>RestKNNStatsHandler</td><td>Plugin statistics</td></tr>
+            <tr><td><code>POST /_plugins/_knn/warmup/{index}</code></td><td>RestKNNWarmupHandler</td><td>Pre-load indices into memory</td></tr>
+            <tr><td><code>POST /_plugins/_knn/models/{id}/_train</code></td><td>RestTrainModelHandler</td><td>Train a new model</td></tr>
+            <tr><td><code>GET /_plugins/_knn/models/{id}</code></td><td>RestGetModelHandler</td><td>Get model metadata</td></tr>
+            <tr><td><code>DELETE /_plugins/_knn/models/{id}</code></td><td>RestDeleteModelHandler</td><td>Delete a model</td></tr>
+            <tr><td><code>POST /_plugins/_knn/models/_search</code></td><td>RestSearchModelHandler</td><td>Search models</td></tr>
+            <tr><td><code>POST /_plugins/_knn/{index}/_clear_cache</code></td><td>RestClearCacheHandler</td><td>Evict from cache</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Transport Actions Pattern</h3>
+    <p>Each API follows the OpenSearch transport action pattern:</p>
+<pre><code>REST Handler &rarr; Action (e.g., KNNStatsAction)
+    &rarr; TransportAction (e.g., KNNStatsTransportAction)
+        &rarr; Executes on appropriate node(s)
+        &rarr; Returns Response</code></pre>
+
+    <h3>Statistics</h3>
+    <p>The stats system tracks:</p>
+    <ul>
+        <li><strong>Cluster-level</strong>: Total graph count, circuit breaker status, model index status</li>
+        <li><strong>Node-level</strong>: Cache stats (hits, misses, size), graph stats, request counts</li>
+        <li><strong>Counters</strong>: Script compilations, errors, query counts</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 13 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-13">
+    <span class="chapter-number">Chapter 13</span>
+    <h2>Advanced Features</h2>
+
+    <h3>Filtered Search</h3>
+    <p>k-NN supports pre-filtering with any OpenSearch query:</p>
+    <ul>
+        <li>For Lucene engine: native integration with Lucene's filtered kNN</li>
+        <li>For Faiss/NMSLIB: filter evaluated first, then ANN search on filtered set</li>
+        <li>Threshold-based strategy: switches to exact search if filter is very selective</li>
+    </ul>
+
+    <h3>Rescore (Two-Phase Search)</h3>
+<pre><code>{
+  "knn": {
+    "my_vector": {
+      "vector": [...],
+      "k": 10,
+      "rescore": {
+        "oversample_factor": 3.0
+      }
+    }
+  }
+}</code></pre>
+    <ol>
+        <li>First phase: ANN search for <code>k * oversample_factor</code> candidates</li>
+        <li>Second phase: Exact distance computation on candidates, return top <code>k</code></li>
+    </ol>
+
+    <h3>Radial Search</h3>
+    <p>Find all vectors within a distance/score threshold (not just top-k):</p>
+    <ul>
+        <li><code>min_score</code>: Return vectors with score &ge; threshold</li>
+        <li><code>max_distance</code>: Return vectors with distance &le; threshold</li>
+    </ul>
+
+    <h3>MMR (Maximal Marginal Relevance)</h3>
+    <div class="info-box success">
+        <p>Located in <code>search/processor/mmr/</code> &mdash; diversifies search results by balancing relevance and diversity. Implemented as a search pipeline processor.</p>
+    </div>
+
+    <h3>Painless Scripting</h3>
+    <p><code>KNNScoringScriptEngine.java</code> enables vector operations in Painless scripts:</p>
+    <ul>
+        <li>Custom scoring functions using vector similarity</li>
+        <li>Supports L2, cosine, hamming distance computations in scripts</li>
+    </ul>
+
+    <h3>Remote Index Build</h3>
+    <p>The <code>index/remote/</code> package supports offloading index building:</p>
+    <ul>
+        <li>Sends vectors to a remote service for index construction</li>
+        <li>Polls for completion</li>
+        <li>Useful for very large indices that are expensive to build locally</li>
+    </ul>
+
+    <h3>Concurrent Search</h3>
+    <p><code>KNNConcurrentSearchRequestDecider</code> enables parallel segment search:</p>
+    <ul>
+        <li>Multiple segments can be searched concurrently</li>
+        <li>Improves latency for indices with many segments</li>
+    </ul>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- CHAPTER 14 -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="chapter-14">
+    <span class="chapter-number">Chapter 14</span>
+    <h2>Build System and Development</h2>
+
+    <h3>Build Structure</h3>
+<pre><code>build.gradle              # Main build file
+&#9500;&#9472;&#9472; JNI compilation       # Native C++ build via CMake
+&#9500;&#9472;&#9472; Java compilation      # Standard Gradle Java plugin
+&#9500;&#9472;&#9472; Integration tests     # OpenSearch test framework
+&#9492;&#9472;&#9472; Packaging            # Plugin zip for distribution</code></pre>
+
+    <h3>Key Gradle Tasks</h3>
+<pre><code>./gradlew build              # Full build
+./gradlew test               # Unit tests
+./gradlew integTest          # Integration tests
+./gradlew run                # Run OpenSearch with plugin
+./gradlew assemble           # Build plugin zip</code></pre>
+
+    <h3>Prerequisites</h3>
+    <ul>
+        <li>Java 21+</li>
+        <li>C++ compiler (for JNI)</li>
+        <li>CMake (for native build)</li>
+        <li>OpenSearch source (for integration)</li>
+    </ul>
+
+    <h3>Testing</h3>
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Location</th><th>Framework</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Unit Tests</td><td><code>src/test/java/</code></td><td>JUnit</td></tr>
+            <tr><td>Integration Tests</td><td>OpenSearch test framework</td><td>REST-based</td></tr>
+            <tr><td>Test Fixtures</td><td><code>src/testFixtures/</code></td><td>Shared utilities</td></tr>
+            <tr><td>JNI Tests</td><td><code>jni/tests/</code></td><td>Google Test (C++)</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Codec Compatibility</h3>
+    <p>When making codec changes:</p>
+    <ol>
+        <li>Create a new codec version (e.g., <code>KNN1050Codec</code>)</li>
+        <li>Move the old version to <code>backward_codecs/</code></li>
+        <li>Ensure old segments can still be read</li>
+        <li>Register the new codec in <code>META-INF/services</code></li>
+    </ol>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- APPENDIX: READING ORDER -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="appendix-reading">
+    <span class="chapter-number">Appendix</span>
+    <h2>Reading Order for New Contributors</h2>
+
+    <p>If you're new to the codebase, read these files in order:</p>
+
+    <ol>
+        <li><strong><code>KNNPlugin.java</code></strong> &mdash; See everything the plugin registers</li>
+        <li><strong><code>SpaceType.java</code></strong> + <strong><code>VectorDataType.java</code></strong> &mdash; Core value types</li>
+        <li><strong><code>KNNEngine.java</code></strong> &mdash; How engines are abstracted</li>
+        <li><strong><code>KNNVectorFieldMapper.java</code></strong> &mdash; How mappings work</li>
+        <li><strong><code>KNNQueryBuilder.java</code></strong> &mdash; How queries are parsed</li>
+        <li><strong><code>KNNWeight.java</code></strong> / <strong><code>DefaultKNNWeight.java</code></strong> &mdash; How search executes</li>
+        <li><strong><code>NativeMemoryCacheManager.java</code></strong> &mdash; How indices are loaded/cached</li>
+        <li><strong><code>jni/src/faiss_wrapper.cpp</code></strong> &mdash; How JNI calls the native library</li>
+        <li><strong><code>TrainingJob.java</code></strong> &mdash; How model training works</li>
+        <li><strong><code>FaissMemoryOptimizedSearcher.java</code></strong> &mdash; Memory-optimized search internals</li>
+    </ol>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- APPENDIX: GLOSSARY -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<section class="chapter" id="appendix-glossary">
+    <span class="chapter-number">Appendix</span>
+    <h2>Glossary</h2>
+
+    <table>
+        <thead>
+            <tr><th>Term</th><th>Definition</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>ANN</strong></td><td>Approximate Nearest Neighbor &mdash; find "close enough" vectors efficiently</td></tr>
+            <tr><td><strong>HNSW</strong></td><td>Hierarchical Navigable Small World &mdash; graph-based ANN algorithm</td></tr>
+            <tr><td><strong>IVF</strong></td><td>Inverted File Index &mdash; partition-based ANN algorithm</td></tr>
+            <tr><td><strong>PQ</strong></td><td>Product Quantization &mdash; vector compression by sub-vector codebook encoding</td></tr>
+            <tr><td><strong>SQ</strong></td><td>Scalar Quantization &mdash; per-dimension bit reduction</td></tr>
+            <tr><td><strong>ef_search</strong></td><td>HNSW parameter: search-time beam width (larger = better recall, slower)</td></tr>
+            <tr><td><strong>ef_construction</strong></td><td>HNSW parameter: build-time beam width (larger = better graph, slower build)</td></tr>
+            <tr><td><strong>M</strong></td><td>HNSW parameter: max connections per node in the graph</td></tr>
+            <tr><td><strong>nlist</strong></td><td>IVF parameter: number of clusters</td></tr>
+            <tr><td><strong>nprobes</strong></td><td>IVF parameter: number of clusters to visit during search</td></tr>
+            <tr><td><strong>Circuit Breaker</strong></td><td>Mechanism to prevent excessive native memory usage</td></tr>
+            <tr><td><strong>Warmup</strong></td><td>Pre-loading native indices into memory before search</td></tr>
+            <tr><td><strong>Segment</strong></td><td>A Lucene index partition; each has its own ANN index</td></tr>
+            <tr><td><strong>Doc Values</strong></td><td>Columnar storage format where raw vectors are persisted</td></tr>
+            <tr><td><strong>Codec</strong></td><td>Lucene's format abstraction for reading/writing index data</td></tr>
+        </tbody>
+    </table>
+</section>
+
+</main>
+
+<script>
+    // Highlight active section in sidebar on scroll
+    const sections = document.querySelectorAll('.chapter');
+    const navLinks = document.querySelectorAll('.sidebar nav a');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                navLinks.forEach(link => link.style.borderLeftColor = 'transparent');
+                const id = entry.target.id;
+                const activeLink = document.querySelector(`.sidebar nav a[href="#${id}"]`);
+                if (activeLink) {
+                    activeLink.style.borderLeftColor = 'var(--primary)';
+                    activeLink.style.color = 'var(--primary)';
+                }
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '-80px 0px -60% 0px' });
+
+    sections.forEach(section => observer.observe(section));
+</script>
+
+</body>
+</html>

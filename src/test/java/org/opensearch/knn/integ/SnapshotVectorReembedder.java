@@ -125,8 +125,7 @@ public final class SnapshotVectorReembedder {
     }
 
     @SuppressWarnings("unchecked")
-    private int reembedAllDocs(String workIndex, String destIndex, String vectorField, VectorTransform transform)
-        throws IOException {
+    private int reembedAllDocs(String workIndex, String destIndex, String vectorField, VectorTransform transform) throws IOException {
         // Scroll through every document's _source. PoC volumes are small, so a single large search is fine.
         Request search = new Request("GET", "/" + workIndex + "/_search");
         search.addParameter("size", "10000");

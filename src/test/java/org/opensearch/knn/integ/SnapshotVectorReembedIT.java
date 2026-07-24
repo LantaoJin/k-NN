@@ -19,7 +19,6 @@ import org.opensearch.knn.index.query.KNNQueryBuilder;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.opensearch.knn.common.KNNConstants.COMPRESSION_LEVEL_PARAMETER;
 import static org.opensearch.knn.common.KNNConstants.DIMENSION;
 import static org.opensearch.knn.common.KNNConstants.KNN_ENGINE;
 import static org.opensearch.knn.common.KNNConstants.MODE_PARAMETER;

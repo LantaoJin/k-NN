@@ -31,6 +31,25 @@ public class MOSFaissSQIndexIT extends AbstractMemoryOptimizedKnnSearchIT {
             Mode.ON_DISK,
             CompressionLevel.x32
         );
+
+        // Radial search on quantized (32x SQ) indices is blocked (#3452); see
+        // testNonNestedDiskBasedIndexWithIP_radial for the skipped radial coverage.
+    }
+
+    // Radial search on quantized (32x SQ) indices is now blocked unconditionally.
+    // See https://github.com/opensearch-project/k-NN/issues/3452.
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/k-NN/issues/3452")
+    @ExpectRemoteBuildValidation
+    public void testNonNestedDiskBasedIndexWithIP_radial() {
+        doTestNonNestedIndex(
+            VectorDataType.FLOAT,
+            SQ_ENCODER_PARAMS,
+            true,
+            SpaceType.INNER_PRODUCT,
+            NO_ADDITIONAL_SETTINGS,
+            Mode.ON_DISK,
+            CompressionLevel.x32
+        );
     }
 
     public void testNestedDiskBasedIndexWithIP() {
@@ -59,6 +78,25 @@ public class MOSFaissSQIndexIT extends AbstractMemoryOptimizedKnnSearchIT {
             Mode.ON_DISK,
             CompressionLevel.x32
         );
+
+        // Radial search on quantized (32x SQ) indices is blocked (#3452); see
+        // testNonNestedDiskBasedIndexWithL2_radial for the skipped radial coverage.
+    }
+
+    // Radial search on quantized (32x SQ) indices is now blocked unconditionally.
+    // See https://github.com/opensearch-project/k-NN/issues/3452.
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/k-NN/issues/3452")
+    @ExpectRemoteBuildValidation
+    public void testNonNestedDiskBasedIndexWithL2_radial() {
+        doTestNonNestedIndex(
+            VectorDataType.FLOAT,
+            SQ_ENCODER_PARAMS,
+            true,
+            SpaceType.L2,
+            NO_ADDITIONAL_SETTINGS,
+            Mode.ON_DISK,
+            CompressionLevel.x32
+        );
     }
 
     public void testNestedDiskBasedIndexWithL2() {
@@ -82,6 +120,25 @@ public class MOSFaissSQIndexIT extends AbstractMemoryOptimizedKnnSearchIT {
             VectorDataType.FLOAT,
             SQ_ENCODER_PARAMS,
             false,
+            SpaceType.COSINESIMIL,
+            NO_ADDITIONAL_SETTINGS,
+            Mode.ON_DISK,
+            CompressionLevel.x32
+        );
+
+        // Radial search on quantized (32x SQ) indices is blocked (#3452); see
+        // testNonNestedDiskBasedIndexWithCosine_radial for the skipped radial coverage.
+    }
+
+    // Radial search on quantized (32x SQ) indices is now blocked unconditionally.
+    // See https://github.com/opensearch-project/k-NN/issues/3452.
+    @AwaitsFix(bugUrl = "https://github.com/opensearch-project/k-NN/issues/3452")
+    @ExpectRemoteBuildValidation
+    public void testNonNestedDiskBasedIndexWithCosine_radial() {
+        doTestNonNestedIndex(
+            VectorDataType.FLOAT,
+            SQ_ENCODER_PARAMS,
+            true,
             SpaceType.COSINESIMIL,
             NO_ADDITIONAL_SETTINGS,
             Mode.ON_DISK,

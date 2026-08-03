@@ -42,7 +42,6 @@ public class KNNConstants {
     public static final String TOP_LEVEL_PARAMETER_SPACE_TYPE = METHOD_PARAMETER_SPACE_TYPE;
     public static final String TOP_LEVEL_PARAMETER_ENGINE = KNN_ENGINE;
     public static final String COMPOUND_EXTENSION = "c";
-    public static final String MODEL = "model";
     public static final String MODELS = "models";
     public static final String MODEL_ID = "model_id";
     public static final String MODEL_BLOB_PARAMETER = "model_blob";
@@ -87,6 +86,7 @@ public class KNNConstants {
     public static final String TOP_LEVEL_ENGINE_FEATURE = "top_level_engine_feature";
 
     public static final String RADIAL_SEARCH_KEY = "radial_search";
+    public static final int MAX_RESULTS_RADIAL_RESCORING = 10000;
     public static final String NULL_K = "null_k";
     public static final String MODEL_VERSION = "model_version";
     public static final String QUANTIZATION_STATE_FILE_SUFFIX = "osknnqstate";
@@ -186,6 +186,11 @@ public class KNNConstants {
     public static int MAX_DISTANCE_COMPUTATIONS = 2048000;
 
     public static final Float DEFAULT_LUCENE_RADIAL_SEARCH_TRAVERSAL_SIMILARITY_RATIO = 0.95f;
+
+    // Decay factor for the adaptive graph-traversal buffer used by Lucene 10.5's decay-based radial
+    // search (VectorSimilarityCollector). Must lie in [0, 1]; higher values explore more of the graph
+    // for better recall. Mirrors the value used on the Lucene engine radial path.
+    public static final float DEFAULT_LUCENE_RADIAL_SEARCH_DECAY = 0.95f;
     public static final String MIN_SCORE = "min_score";
     public static final String MAX_DISTANCE = "max_distance";
 

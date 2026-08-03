@@ -36,8 +36,6 @@ import org.opensearch.knn.index.engine.KNNMethodContext;
 import org.opensearch.knn.index.engine.MemoryOptimizedSearchSupportSpec;
 import org.opensearch.knn.index.engine.MethodComponentContext;
 import org.opensearch.knn.index.engine.model.QueryContext;
-import org.opensearch.knn.index.engine.qframe.QuantizationConfig;
-import org.opensearch.knn.index.mapper.CompressionLevel;
 import org.opensearch.knn.index.mapper.KNNMappingConfig;
 import org.opensearch.knn.index.mapper.KNNVectorFieldType;
 import org.opensearch.knn.index.query.parser.KNNQueryBuilderParser;
@@ -61,7 +59,6 @@ import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_EF_SEARCH;
 import static org.opensearch.knn.common.KNNConstants.METHOD_PARAMETER_NPROBES;
 import static org.opensearch.knn.common.KNNConstants.MIN_SCORE;
 import static org.opensearch.knn.common.KNNValidationUtil.validateByteVectorValue;
-import static org.opensearch.knn.index.engine.KNNEngine.ENGINES_SUPPORTING_RADIAL_SEARCH;
 import static org.opensearch.knn.index.engine.KNNEngine.FAISS;
 import static org.opensearch.knn.index.engine.validation.ParameterValidator.validateParameters;
 import static org.opensearch.knn.index.query.parser.MethodParametersParser.validateMethodParameters;
@@ -481,20 +478,7 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
         }
 
         if (this.maxDistance != null || this.minScore != null) {
-            if (!ENGINES_SUPPORTING_RADIAL_SEARCH.contains(knnEngine)) {
-                throw new UnsupportedOperationException(
-                    String.format(Locale.ROOT, "Engine [%s] does not support radial search", knnEngine)
-                );
-            }
-            if (vectorDataType == VectorDataType.BINARY) {
-                throw new UnsupportedOperationException(String.format(Locale.ROOT, "Binary data type does not support radial search"));
-            }
-
-            if ((knnMappingConfig.getQuantizationConfig() != QuantizationConfig.EMPTY)
-                // If compression level is 32x, then radial search should be blocked.
-                || (knnMappingConfig.getCompressionLevel() == CompressionLevel.x32)) {
-                throw new UnsupportedOperationException("Radial search is not supported for indices which have quantization enabled");
-            }
+            knnVectorFieldType.validateSupportRadialSearch(knnEngine);
         }
 
         // Currently, k-NN supports distance and score types radial search
@@ -539,28 +523,13 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
 
         byte[] byteVector = new byte[0];
         switch (vectorDataType) {
-            case BINARY:
+            case BINARY, BYTE:
                 byteVector = new byte[vector.length];
                 for (int i = 0; i < vector.length; i++) {
                     validateByteVectorValue(vector[i], knnVectorFieldType.getVectorDataType());
                     byteVector[i] = (byte) vector[i];
                 }
                 spaceType.validateVector(byteVector);
-                break;
-            case BYTE:
-                if (isUsingLuceneQuery(knnEngine, memoryOptimizedSearchEnabled)) {
-                    byteVector = new byte[vector.length];
-                    for (int i = 0; i < vector.length; i++) {
-                        validateByteVectorValue(vector[i], knnVectorFieldType.getVectorDataType());
-                        byteVector[i] = (byte) vector[i];
-                    }
-                    spaceType.validateVector(byteVector);
-                } else {
-                    for (float v : vector) {
-                        validateByteVectorValue(v, knnVectorFieldType.getVectorDataType());
-                    }
-                    spaceType.validateVector(vector);
-                }
                 break;
             default:
                 spaceType.validateVector(vector);
@@ -579,7 +548,7 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
                 .fieldName(this.fieldName)
                 .vector(getFloatVectorForCreatingQueryRequest(transformedQueryVector, vectorDataType, knnEngine))
                 .originalVector(vector)
-                .byteVector(getByteVectorForCreatingQueryRequest(vectorDataType, knnEngine, byteVector, memoryOptimizedSearchEnabled))
+                .byteVector(getByteVectorForCreatingQueryRequest(vectorDataType, byteVector))
                 .vectorDataType(vectorDataType)
                 .k(this.k)
                 .methodParameters(this.methodParameters)
@@ -598,8 +567,9 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
                 .fieldName(this.fieldName)
                 .vector(getFloatVectorForCreatingQueryRequest(transformedQueryVector, vectorDataType, knnEngine))
                 .originalVector(vector)
-                .byteVector(getByteVectorForCreatingQueryRequest(vectorDataType, knnEngine, byteVector, memoryOptimizedSearchEnabled))
+                .byteVector(getByteVectorForCreatingQueryRequest(vectorDataType, byteVector))
                 .vectorDataType(vectorDataType)
+                .vectorFieldType(knnVectorFieldType)
                 .radius(radius)
                 .methodParameters(this.methodParameters)
                 .filter(this.filter)
@@ -634,19 +604,6 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
         }
 
         throw new IllegalArgumentException(String.format(Locale.ROOT, "Field '%s' is not built for ANN search.", this.fieldName));
-    }
-
-    /**
-     * Determine whether the query will be using Lucene query to perform vector search.
-     * Currently, if memory optimized search is enabled, it fallbacks to Lucene and delegate its HNSW graph searcher to perform ANN search
-     * on FAISS index. Hence, if it is true, then we need to use Lucene query.
-     *
-     * @param engine Engine type
-     * @param memoryOptimizedSearchEnabled A bool flag whether memory optimized search is enabled.
-     * @return True when it should use Lucene query False otherwise.
-     */
-    private static boolean isUsingLuceneQuery(final KNNEngine engine, final boolean memoryOptimizedSearchEnabled) {
-        return memoryOptimizedSearchEnabled || engine == KNNEngine.LUCENE;
     }
 
     private ModelMetadata getModelMetadataForField(String modelId) {
@@ -701,15 +658,8 @@ public class KNNQueryBuilder extends AbstractQueryBuilder<KNNQueryBuilder> imple
         return null;
     }
 
-    private byte[] getByteVectorForCreatingQueryRequest(
-        VectorDataType vectorDataType,
-        KNNEngine knnEngine,
-        byte[] byteVector,
-        boolean memoryOptimizedSearchEnabled
-    ) {
-
-        if (VectorDataType.BINARY == vectorDataType
-            || (VectorDataType.BYTE == vectorDataType && isUsingLuceneQuery(knnEngine, memoryOptimizedSearchEnabled))) {
+    private byte[] getByteVectorForCreatingQueryRequest(VectorDataType vectorDataType, byte[] byteVector) {
+        if (VectorDataType.BINARY == vectorDataType || VectorDataType.BYTE == vectorDataType) {
             return byteVector;
         }
         return null;
